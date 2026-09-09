@@ -1,32 +1,157 @@
-# Backend II - Plataforma de Eventos e Inscripciones
+# Plataforma de Eventos e Inscripciones
 
-## Temática
+## Pre-entrega 2 — Registro seguro de usuarios
 
-API REST orientada a la gestión de una plataforma de eventos e inscripciones.
+### Descripción
 
-Este proyecto representa la base inicial de una aplicación backend preparada para incorporar futuras funcionalidades como gestión de usuarios, autenticación, eventos e inscripciones.
+Implementación del registro seguro de usuarios mediante el endpoint:
 
-## Tecnologías
+POST /api/sessions/register
 
-- Node.js
-- Express
-- dotenv
-- JavaScript
-- Módulos ESM
+El registro incluye validación de datos, normalización del email, verificación de usuarios duplicados, hash de contraseña con bcrypt y persistencia en MongoDB.
 
-## Instalación
+---
 
-Clonar el repositorio:
+## Endpoint
 
-```bash
-git clone <URL_DEL_REPOSITORIO>
+### POST /api/sessions/register
+
+Registra un nuevo usuario en la base de datos.
+
+### Campos esperados
+
+| Campo | Tipo | Descripción |
+|---|---|---|
+| first_name | String | Nombre del usuario |
+| last_name | String | Apellido del usuario |
+| email | String | Email del usuario |
+| password | String | Contraseña del usuario |
+
+El campo `role` no puede ser enviado ni manipulado desde el registro público. Su valor por defecto es `user`.
+
+---
+
+## Ejemplo de petición
+
+```json
+{
+  "first_name": "Ana",
+  "last_name": "Pérez",
+  "email": "Ana@Mail.com ",
+  "password": "Secreta123"
+}
 ```
 
-Ingresar a la carpeta del proyecto:
+El email es normalizado antes de guardarse:
 
-```bash
-cd backend-ii-plataforma-de-eventos-e-inscripciones
+- Se eliminan los espacios innecesarios.
+- Se convierte a minúsculas.
+
+Resultado:
+
+```text
+ana@mail.com
 ```
+
+---
+
+## Respuesta exitosa
+
+Código HTTP:
+
+```text
+201 Created
+```
+
+Ejemplo:
+
+```json
+{
+  "status": "success",
+  "payload": {
+    "id": "665f2a...",
+    "first_name": "Ana",
+    "last_name": "Pérez",
+    "email": "ana@mail.com",
+    "role": "user"
+  }
+}
+```
+
+La respuesta no incluye la contraseña.
+
+---
+
+## Errores
+
+### Campos obligatorios faltantes
+
+Código HTTP:
+
+```text
+400 Bad Request
+```
+
+Respuesta:
+
+```json
+{
+  "status": "error",
+  "message": "Faltan campos obligatorios"
+}
+```
+
+### Email inválido
+
+Código HTTP:
+
+```text
+400 Bad Request
+```
+
+### Email ya registrado
+
+Código HTTP:
+
+```text
+409 Conflict
+```
+
+Respuesta:
+
+```json
+{
+  "status": "error",
+  "message": "El email ya está registrado"
+}
+```
+
+---
+
+## Seguridad
+
+Las contraseñas son hasheadas utilizando bcrypt antes de guardarse en MongoDB.
+
+Las contraseñas no se guardan en texto plano y tampoco se incluyen en las respuestas del endpoint.
+
+---
+
+## Configuración
+
+Crear un archivo `.env` utilizando como referencia `.env.example`.
+
+Variables necesarias:
+
+```env
+PORT=8080
+NODE_ENV=development
+MONGO_URL=TU_URL_DE_MONGODB
+JWT_SECRET=
+```
+
+---
+
+## Ejecución del proyecto
 
 Instalar las dependencias:
 
@@ -34,106 +159,35 @@ Instalar las dependencias:
 npm install
 ```
 
-## Variables de entorno
-
-Crear un archivo `.env` en la raíz del proyecto utilizando como referencia `.env.example`.
-
-Variables disponibles:
-
-```env
-PORT=8080
-NODE_ENV=development
-MONGO_URL=
-JWT_SECRET=
-```
-
-## Ejecución
-
-Para iniciar el servidor:
+Iniciar el servidor:
 
 ```bash
 npm start
 ```
 
-El servidor se ejecutará en:
+El servidor se ejecuta en:
 
 ```text
 http://localhost:8080
 ```
 
-## Estructura de carpetas
+---
+
+## Cómo probar el endpoint
+
+Enviar una petición POST a:
 
 ```text
-Backend II Plataforma de eventos e inscripciones/
-│
-├── src/
-│   ├── app.js
-│   ├── server.js
-│   ├── config/
-│   ├── routes/
-│   │   ├── events.router.js
-│   │   ├── health.router.js
-│   │   └── sessions.router.js
-│   ├── controllers/
-│   │   ├── events.controller.js
-│   │   └── sessions.controller.js
-│   ├── services/
-│   ├── repositories/
-│   ├── dao/
-│   ├── models/
-│   │   ├── User.js
-│   │   └── Event.js
-│   ├── middlewares/
-│   └── utils/
-│
-├── .env.example
-├── .gitignore
-├── package.json
-└── README.md
+http://localhost:8080/api/sessions/register
 ```
 
-## Rutas disponibles
-
-### Health Check
-
-**GET**
-
-```text
-/api/health
-```
-
-Respuesta:
+Con un body JSON que contenga:
 
 ```json
 {
-  "status": "ok",
-  "message": "Servidor activo"
+  "first_name": "Nombre",
+  "last_name": "Apellido",
+  "email": "email@mail.com",
+  "password": "contraseña"
 }
 ```
-
-### Events
-
-**GET**
-
-```text
-/api/events
-```
-
-Respuesta:
-
-```json
-{
-  "status": "success",
-  "payload": []
-}
-```
-
-### Sessions
-
-Estructura inicial disponible mediante:
-
-```text
-/api/sessions
-```
-
-Sin lógica de autenticación implementada en esta etapa.
