@@ -1,18 +1,23 @@
 # Plataforma de Eventos e Inscripciones
 
-## Pre-entrega 2 — Registro seguro de usuarios
+## Pre-entrega 2 — Registro seguro de usuarios y autenticación
 
 ### Descripción
 
-Implementación del registro seguro de usuarios mediante el endpoint:
+Implementación del registro seguro de usuarios y autenticación mediante los siguientes endpoints:
 
-POST /api/sessions/register
+- POST /api/sessions/register
+- POST /api/sessions/login
+- GET /api/sessions/current
+- POST /api/sessions/logout
 
 El registro incluye validación de datos, normalización del email, verificación de usuarios duplicados, hash de contraseña con bcrypt y persistencia en MongoDB.
 
+La autenticación utiliza JWT almacenado en una cookie `currentUser`.
+
 ---
 
-## Endpoint
+## Endpoints
 
 ### POST /api/sessions/register
 
@@ -29,9 +34,7 @@ Registra un nuevo usuario en la base de datos.
 
 El campo `role` no puede ser enviado ni manipulado desde el registro público. Su valor por defecto es `user`.
 
----
-
-## Ejemplo de petición
+### Ejemplo de petición
 
 ```json
 {
@@ -53,9 +56,7 @@ Resultado:
 ana@mail.com
 ```
 
----
-
-## Respuesta exitosa
+### Respuesta exitosa
 
 Código HTTP:
 
@@ -79,6 +80,141 @@ Ejemplo:
 ```
 
 La respuesta no incluye la contraseña.
+
+---
+
+### POST /api/sessions/login
+
+Autentica un usuario mediante email y contraseña.
+
+### Ejemplo de petición
+
+```json
+{
+  "email": "ana@mail.com",
+  "password": "Secreta123"
+}
+```
+
+### Respuesta exitosa
+
+Código HTTP:
+
+```text
+200 OK
+```
+
+Ejemplo:
+
+```json
+{
+  "status": "success",
+  "message": "Login correcto"
+}
+```
+
+Al realizar el login correctamente, se genera un JWT y se almacena en la cookie `currentUser`.
+
+La cookie utiliza:
+
+- `httpOnly: true`
+- `sameSite: lax`
+- `maxAge: 3600000`
+- `secure: true` solamente en producción
+
+El JWT contiene únicamente:
+
+- `id`
+- `email`
+- `role`
+
+La contraseña no se incluye en el token.
+
+---
+
+### GET /api/sessions/current
+
+Obtiene los datos del usuario autenticado.
+
+Este endpoint está protegido mediante el middleware de autenticación y requiere una cookie `currentUser` con un JWT válido.
+
+### Ejemplo de petición
+
+```text
+GET /api/sessions/current
+```
+
+No requiere body.
+
+### Respuesta exitosa
+
+Código HTTP:
+
+```text
+200 OK
+```
+
+Ejemplo:
+
+```json
+{
+  "id": "6aa8959fb78a518c26711f3e",
+  "email": "martin.fernandez.prueba@mail.com",
+  "role": "user"
+}
+```
+
+La respuesta contiene únicamente `id`, `email` y `role`.
+
+### Respuesta sin autenticación
+
+Código HTTP:
+
+```text
+401 Unauthorized
+```
+
+Ejemplo:
+
+```json
+{
+  "status": "error",
+  "message": "No autenticado"
+}
+```
+
+También se devuelve `401 Unauthorized` cuando el JWT es inválido o está expirado.
+
+---
+
+### POST /api/sessions/logout
+
+Cierra la sesión eliminando la cookie `currentUser`.
+
+### Ejemplo de petición
+
+```text
+POST /api/sessions/logout
+```
+
+No requiere body.
+
+### Respuesta exitosa
+
+Código HTTP:
+
+```text
+200 OK
+```
+
+Ejemplo:
+
+```json
+{
+  "status": "success",
+  "message": "Logout correcto"
+}
+```
 
 ---
 
@@ -126,6 +262,25 @@ Respuesta:
 }
 ```
 
+### Credenciales inválidas
+
+Código HTTP:
+
+```text
+401 Unauthorized
+```
+
+Respuesta:
+
+```json
+{
+  "status": "error",
+  "message": "Credenciales inválidas"
+}
+```
+
+La misma respuesta se utiliza cuando el email no existe o la contraseña es incorrecta.
+
 ---
 
 ## Seguridad
@@ -133,6 +288,10 @@ Respuesta:
 Las contraseñas son hasheadas utilizando bcrypt antes de guardarse en MongoDB.
 
 Las contraseñas no se guardan en texto plano y tampoco se incluyen en las respuestas del endpoint.
+
+Los tokens JWT contienen únicamente `id`, `email` y `role`.
+
+El secreto utilizado para firmar los JWT se configura mediante variables de entorno.
 
 ---
 
@@ -146,7 +305,8 @@ Variables necesarias:
 PORT=8080
 NODE_ENV=development
 MONGO_URL=TU_URL_DE_MONGODB
-JWT_SECRET=
+JWT_SECRET=TU_SECRETO_JWT
+JWT_EXPIRES_IN=1h
 ```
 
 ---
@@ -173,7 +333,9 @@ http://localhost:8080
 
 ---
 
-## Cómo probar el endpoint
+## Cómo probar los endpoints
+
+### Registro
 
 Enviar una petición POST a:
 
@@ -181,7 +343,7 @@ Enviar una petición POST a:
 http://localhost:8080/api/sessions/register
 ```
 
-Con un body JSON que contenga:
+Con un body JSON:
 
 ```json
 {
@@ -191,3 +353,42 @@ Con un body JSON que contenga:
   "password": "contraseña"
 }
 ```
+
+### Login
+
+Enviar una petición POST a:
+
+```text
+http://localhost:8080/api/sessions/login
+```
+
+Con un body JSON:
+
+```json
+{
+  "email": "email@mail.com",
+  "password": "contraseña"
+}
+```
+
+### Usuario actual
+
+Enviar una petición GET a:
+
+```text
+http://localhost:8080/api/sessions/current
+```
+
+No requiere body. La cookie `currentUser` debe estar presente y contener un JWT válido.
+
+### Logout
+
+Enviar una petición POST a:
+
+```text
+http://localhost:8080/api/sessions/logout
+```
+
+No requiere body.
+
+Después del logout, una petición a `/api/sessions/current` debe devolver `401 Unauthorized`.
