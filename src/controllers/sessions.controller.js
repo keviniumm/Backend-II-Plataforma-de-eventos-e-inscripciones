@@ -58,6 +58,14 @@ class SessionsController {
             })
         }
     }
+
+    current = (req, res) => {
+        res.status(200).json({
+            id: req.user.id,
+            email: req.user.email,
+            role: req.user.role
+        })
+    }
 }
 
 export default SessionsController
