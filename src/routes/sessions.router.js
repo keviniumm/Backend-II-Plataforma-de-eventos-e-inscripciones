@@ -8,5 +8,6 @@ const sessionsController = new SessionsController()
 router.post('/register', sessionsController.register)
 router.post('/login', sessionsController.login)
 router.get('/current', auth, sessionsController.current)
+router.post('/logout', sessionsController.logout)
 
 export default router

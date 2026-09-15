@@ -66,6 +66,15 @@ class SessionsController {
             role: req.user.role
         })
     }
+
+    logout = (req, res) => {
+        res.clearCookie('currentUser')
+
+        res.status(200).json({
+            status: 'success',
+            message: 'Logout correcto'
+        })
+    }
 }
 
 export default SessionsController
