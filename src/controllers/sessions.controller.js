@@ -61,9 +61,14 @@ class SessionsController {
 
     current = (req, res) => {
         res.status(200).json({
-            id: req.user.id,
-            email: req.user.email,
-            role: req.user.role
+            status: 'success',
+            payload: {
+                id: req.user.id,
+                first_name: req.user.first_name,
+                last_name: req.user.last_name,
+                email: req.user.email,
+                role: req.user.role
+            }
         })
     }
 
