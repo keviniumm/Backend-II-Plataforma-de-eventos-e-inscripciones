@@ -47,7 +47,8 @@ export const initializePassport = () => {
                     first_name,
                     last_name,
                     email: normalizedEmail,
-                    password: hashedPassword
+                    password: hashedPassword,
+                    role: 'user' 
                 })
 
                 return done(null, newUser)

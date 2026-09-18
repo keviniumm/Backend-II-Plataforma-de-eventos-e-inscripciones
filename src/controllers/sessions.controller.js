@@ -1,62 +1,37 @@
-import SessionsService from '../services/sessions.service.js'
+import { generateToken } from '../utils/jwt.js'
 
 class SessionsController {
-    constructor() {
-        this.sessionsService = new SessionsService()
-    }
-
-    register = async (req, res) => {
-        try {
-            const newUser = await this.sessionsService.register(req.body)
-
-            res.status(201).json({
-                status: 'success',
-                payload: {
-                    id: newUser._id,
-                    first_name: newUser.first_name,
-                    last_name: newUser.last_name,
-                    email: newUser.email,
-                    role: newUser.role
-                }
-            })
-        } catch (error) {
-            if (error.statusCode === 409) {
-                return res.status(409).json({
-                    status: 'error',
-                    message: error.message
-                })
+    register = (req, res) => {
+        const newUser = req.user
+        res.status(201).json({
+            status: 'success',
+            payload: {
+                id: newUser._id,
+                first_name: newUser.first_name,
+                last_name: newUser.last_name,
+                email: newUser.email,
+                role: newUser.role
             }
-
-            res.status(400).json({
-                status: 'error',
-                message: error.message
-            })
-        }
+        })
     }
 
-    login = async (req, res) => {
-        try {
-            const { email, password } = req.body
-
-            const token = await this.sessionsService.login(email, password)
-
-            res.cookie('currentUser', token, {
-                httpOnly: true,
-                sameSite: 'lax',
-                maxAge: 3600000,
-                secure: process.env.NODE_ENV === 'production'
-            })
-
-            res.status(200).json({
-                status: 'success',
-                message: 'Login correcto'
-            })
-        } catch (error) {
-            res.status(401).json({
-                status: 'error',
-                message: 'Credenciales inválidas'
-            })
-        }
+    login = (req, res) => {
+        const user = req.user
+        const token = generateToken({
+            id: user._id,
+            email: user.email,
+            role: user.role
+        })
+        res.cookie('currentUser', token, {
+            httpOnly: true,
+            sameSite: 'lax',
+            maxAge: 3600000,
+            secure: process.env.NODE_ENV === 'production'
+        })
+        res.status(200).json({
+            status: 'success',
+            message: 'Login correcto'
+        })
     }
 
     current = (req, res) => {
@@ -64,8 +39,6 @@ class SessionsController {
             status: 'success',
             payload: {
                 id: req.user.id,
-                first_name: req.user.first_name,
-                last_name: req.user.last_name,
                 email: req.user.email,
                 role: req.user.role
             }
@@ -74,7 +47,6 @@ class SessionsController {
 
     logout = (req, res) => {
         res.clearCookie('currentUser')
-
         res.status(200).json({
             status: 'success',
             message: 'Logout correcto'
