@@ -1,384 +1,461 @@
 # Plataforma de Eventos e Inscripciones
 
-## Pre-entrega 4 — Autenticación centralizada con Passport.js
+## Pre-entrega 5 — Roles y autorización
 
-### Descripción
+Proyecto backend desarrollado con Node.js, Express y MongoDB para la gestión de usuarios, sesiones y eventos.
 
-Implementación de autenticación centralizada mediante Passport.js para los siguientes endpoints:
-
-* POST /api/sessions/register
-* POST /api/sessions/login
-* GET /api/sessions/current
-* POST /api/sessions/logout
-
-La autenticación utiliza Passport.js con las estrategias `register`, `login` y `current`.
-
-El registro incluye validación de datos, normalización del email, verificación de usuarios duplicados, hash de contraseña con bcrypt, asignación del rol por defecto y persistencia en MongoDB.
-
-El login valida las credenciales mediante Passport, genera un JWT y lo almacena en una cookie `currentUser`.
-
-El endpoint `current` valida el JWT mediante la estrategia `current` de Passport y obtiene el usuario autenticado mediante `req.user`.
+En esta pre-entrega se implementa un sistema de **roles y autorización**, utilizando autenticación mediante JWT y middlewares reutilizables.
 
 ---
 
-## Passport.js
+## Roles
 
-Passport se inicializa en `src/app.js`.
+El sistema maneja tres roles:
 
-Las estrategias de autenticación se encuentran centralizadas en:
+- `user`
+- `organizer`
+- `admin`
 
-`src/config/passport.config.js`
+El rol por defecto al registrarse es:
 
-### Estrategia register
+```text
+user
+```
 
-La estrategia `register` se encarga de:
-
-* Validar los campos obligatorios.
-* Validar el formato básico del email.
-* Validar la longitud mínima de la contraseña.
-* Normalizar el email.
-* Verificar si el usuario ya existe.
-* Hashear la contraseña mediante bcrypt.
-* Asignar el rol `user` por defecto.
-* Crear el usuario en MongoDB.
-
-La ruta utiliza la estrategia `register` de Passport.
-
-### Estrategia login
-
-La estrategia `login` se encarga de:
-
-* Recibir email y contraseña.
-* Normalizar el email.
-* Buscar el usuario.
-* Comparar la contraseña mediante bcrypt.
-* Validar las credenciales.
-
-Las credenciales inválidas generan una respuesta genérica para no revelar si el email existe o no.
-
-La ruta utiliza la estrategia `login` de Passport.
-
-Después de una autenticación exitosa, el controller genera el JWT y lo almacena en la cookie `currentUser`.
-
-### Estrategia current
-
-La estrategia `current` utiliza `passport-jwt`.
-
-El JWT se obtiene desde la cookie `currentUser`.
-
-Passport valida el token mediante `JWT_SECRET` y busca el usuario correspondiente en MongoDB.
-
-El usuario autenticado queda disponible mediante `req.user`.
-
-La ruta utiliza la estrategia `current` de Passport.
-
-No se utiliza `express-session`, ya que la autenticación se realiza mediante JWT.
-
-La estructura permite incorporar futuras estrategias de autenticación externa, como Google o GitHub, desde `passport.config.js` sin modificar la inicialización de Passport en `app.js`.
+El registro público no permite que el usuario seleccione libremente un rol privilegiado. Los nuevos usuarios son registrados siempre con el rol `user`.
 
 ---
 
-## Endpoints
+## Matriz de permisos
 
-### POST /api/sessions/register
+| Acción | user | organizer | admin |
+|---|---:|---:|---:|
+| Consultar eventos publicados | ✅ | ✅ | ✅ |
+| Crear eventos | ❌ | ✅ | ✅ |
+| Modificar sus propios eventos | ❌ | ✅ | ✅ |
+| Modificar cualquier evento | ❌ | ❌ | ✅ |
+| Ver todos los usuarios | ❌ | ❌ | ✅ |
 
-Registra un nuevo usuario en la base de datos.
+---
 
-### Campos esperados
+## Autenticación
 
-| Campo      | Tipo   | Descripción            |
-| ---------- | ------ | ---------------------- |
-| first_name | String | Nombre del usuario     |
-| last_name  | String | Apellido del usuario   |
-| email      | String | Email del usuario      |
-| password   | String | Contraseña del usuario |
+La autenticación se realiza mediante JWT almacenado en una cookie.
 
-El campo `role` no debe ser enviado desde el registro público. La estrategia `register` asigna el valor `user`.
+Se implementó un middleware reutilizable:
 
-### Ejemplo de petición
+```text
+src/middlewares/auth.middleware.js
+```
+
+Este middleware:
+
+1. Obtiene el JWT desde la cookie.
+2. Valida el token mediante Passport.
+3. Busca y valida el usuario.
+4. Guarda el usuario autenticado en:
+
+```js
+req.user
+```
+
+5. Si no existe una sesión válida, responde:
+
+```text
+401 No autenticado
+```
+
+---
+
+## Autorización
+
+Se implementó un middleware reutilizable:
+
+```text
+src/middlewares/authorize.middleware.js
+```
+
+Este middleware recibe los roles permitidos para una determinada acción.
+
+Ejemplo:
+
+```js
+authorizeMiddleware('organizer', 'admin')
+```
+
+Si el usuario autenticado no posee uno de los roles permitidos, responde:
+
+```text
+403 No tenés permisos para realizar esta acción
+```
+
+---
+
+## Rutas protegidas
+
+### Obtener usuario autenticado
+
+```http
+GET /api/sessions/current
+```
+
+Requiere autenticación.
+
+Sin una cookie JWT válida:
+
+```text
+401
+```
+
+---
+
+### Crear un evento
+
+```http
+POST /api/events
+```
+
+Roles permitidos:
+
+```text
+organizer
+admin
+```
+
+Un usuario con rol `user` recibe:
+
+```text
+403
+```
+
+---
+
+### Modificar un evento
+
+```http
+PUT /api/events/:id
+```
+
+Roles permitidos:
+
+```text
+organizer
+admin
+```
+
+Además se valida la propiedad del recurso:
+
+- Un `organizer` solamente puede modificar sus propios eventos.
+- Un `admin` puede modificar cualquier evento.
+
+Si un `organizer` intenta modificar un evento perteneciente a otro `organizer`, recibe:
+
+```text
+403
+```
+
+---
+
+### Ver todos los usuarios
+
+```http
+GET /api/users
+```
+
+Esta ruta requiere rol:
+
+```text
+admin
+```
+
+Un usuario autenticado con otro rol recibe:
+
+```text
+403
+```
+
+---
+
+## Diferencia entre 401 y 403
+
+### 401 — No autenticado
+
+Se devuelve cuando el usuario no tiene una sesión válida.
+
+Ejemplo:
+
+```http
+GET /api/sessions/current
+```
+
+sin cookie JWT.
+
+Respuesta:
 
 ```json
 {
-  "first_name": "Ana",
-  "last_name": "Pérez",
-  "email": "Ana@Mail.com ",
-  "password": "Secreta123"
+    "status": "error",
+    "message": "No autenticado"
 }
 ```
 
-El email es normalizado antes de guardarse:
+---
 
-* Se eliminan los espacios innecesarios.
-* Se convierte a minúsculas.
+### 403 — Sin permisos
+
+Se devuelve cuando el usuario está autenticado pero su rol no permite realizar la acción.
+
+Ejemplo:
+
+Un usuario con rol:
+
+```text
+user
+```
+
+intenta crear un evento.
+
+Respuesta:
+
+```json
+{
+    "status": "error",
+    "message": "No tenés permisos para realizar esta acción"
+}
+```
+
+---
+
+## Validación de propiedad de eventos
+
+Los eventos almacenan el usuario que los creó mediante el campo:
+
+```js
+organizer
+```
+
+Este campo referencia al usuario propietario del evento.
+
+Al modificar un evento:
+
+- Si el usuario es `organizer`, se compara su ID con el ID del propietario del evento.
+- Si no coinciden, se devuelve `403`.
+- Si el usuario es `admin`, puede modificar el evento independientemente de su propietario.
+
+---
+
+## Pruebas realizadas
+
+Se verificaron los siguientes casos:
+
+### 1. Usuario intenta crear un evento
+
+Rol:
+
+```text
+user
+```
 
 Resultado:
 
 ```text
-ana@mail.com
+403
 ```
-
-### Respuesta exitosa
-
-Código HTTP:
-
-```text
-201 Created
-```
-
-Ejemplo:
-
-```json
-{
-  "status": "success",
-  "payload": {
-    "id": "665f2a...",
-    "first_name": "Ana",
-    "last_name": "Pérez",
-    "email": "ana@mail.com",
-    "role": "user"
-  }
-}
-```
-
-La respuesta no incluye la contraseña.
 
 ---
 
-### POST /api/sessions/login
+### 2. Organizer crea un evento
 
-Autentica un usuario mediante email y contraseña utilizando Passport.
-
-### Ejemplo de petición
-
-```json
-{
-  "email": "ana@mail.com",
-  "password": "Secreta123"
-}
-```
-
-### Respuesta exitosa
-
-Código HTTP:
+Rol:
 
 ```text
-200 OK
+organizer
 ```
 
-Ejemplo:
+Resultado:
 
-```json
-{
-  "status": "success",
-  "message": "Login correcto"
-}
+```text
+201
 ```
 
-Al realizar el login correctamente, se genera un JWT y se almacena en la cookie `currentUser`.
-
-La cookie utiliza:
-
-* `httpOnly: true`
-* `sameSite: lax`
-* `maxAge: 3600000`
-* `secure: true` solamente en producción
-
-El JWT contiene únicamente:
-
-* `id`
-* `email`
-* `role`
-
-La contraseña no se incluye en el token.
+El evento fue creado correctamente.
 
 ---
 
-### GET /api/sessions/current
+### 3. Organizer intenta acceder a una ruta administrativa
 
-Obtiene los datos del usuario autenticado.
-
-Este endpoint está protegido mediante la estrategia `current` de Passport y requiere una cookie `currentUser` con un JWT válido.
-
-### Ejemplo de petición
+Rol:
 
 ```text
+organizer
+```
+
+Ruta:
+
+```http
+GET /api/users
+```
+
+Resultado:
+
+```text
+403
+```
+
+---
+
+### 4. Admin accede a una ruta administrativa
+
+Rol:
+
+```text
+admin
+```
+
+Ruta:
+
+```http
+GET /api/users
+```
+
+Resultado:
+
+```text
+200
+```
+
+---
+
+### 5. Acceso a ruta privada sin autenticación
+
+Ruta:
+
+```http
 GET /api/sessions/current
 ```
 
-No requiere body.
+Sin cookie JWT.
 
-### Respuesta exitosa
-
-Código HTTP:
+Resultado:
 
 ```text
-200 OK
-```
-
-Ejemplo:
-
-```json
-{
-  "status": "success",
-  "payload": {
-    "id": "6aaca2fdab88612a00772004",
-    "email": "carlos@test.com",
-    "role": "user"
-  }
-}
-```
-
-La respuesta no incluye la contraseña ni otros datos personales innecesarios.
-
-### Respuesta sin autenticación
-
-Código HTTP:
-
-```text
-401 Unauthorized
-```
-
-También se devuelve `401 Unauthorized` cuando el JWT es inválido, está manipulado o está expirado.
-
----
-
-### POST /api/sessions/logout
-
-Cierra la sesión eliminando la cookie `currentUser`.
-
-Este endpoint no utiliza Passport.
-
-### Ejemplo de petición
-
-```text
-POST /api/sessions/logout
-```
-
-No requiere body.
-
-### Respuesta exitosa
-
-Código HTTP:
-
-```text
-200 OK
-```
-
-Ejemplo:
-
-```json
-{
-  "status": "success",
-  "message": "Logout correcto"
-}
+401
 ```
 
 ---
 
-## Errores
+### 6. Organizer intenta modificar el evento de otro organizer
 
-### Campos obligatorios faltantes
-
-Código HTTP:
+Resultado:
 
 ```text
-400 Bad Request
+403
 ```
 
-Respuesta:
-
-```json
-{
-  "status": "error",
-  "message": "Faltan campos obligatorios"
-}
-```
-
-### Email inválido
-
-Código HTTP:
-
-```text
-400 Bad Request
-```
-
-### Email ya registrado
-
-Código HTTP:
-
-```text
-409 Conflict
-```
-
-Respuesta:
-
-```json
-{
-  "status": "error",
-  "message": "El email ya está registrado"
-}
-```
-
-### Credenciales inválidas
-
-Código HTTP:
-
-```text
-401 Unauthorized
-```
-
-Respuesta:
-
-```json
-{
-  "status": "error",
-  "message": "Credenciales inválidas"
-}
-```
-
-La misma respuesta se utiliza cuando el email no existe o la contraseña es incorrecta.
+Se verificó correctamente la validación de propiedad del recurso.
 
 ---
 
-## Seguridad
+## Estructura principal
 
-Las contraseñas son hasheadas utilizando bcrypt antes de guardarse en MongoDB.
-
-Las contraseñas no se guardan en texto plano y tampoco se incluyen en las respuestas de los endpoints.
-
-Los tokens JWT contienen únicamente `id`, `email` y `role`.
-
-El JWT se almacena en una cookie `currentUser` configurada con `httpOnly: true`.
-
-El secreto utilizado para firmar y validar los JWT se configura mediante variables de entorno.
-
----
-
-## Configuración
-
-Crear un archivo `.env` utilizando como referencia `.env.example`.
-
-Variables necesarias:
-
-```env
-PORT=8080
-NODE_ENV=development
-MONGO_URL=TU_URL_DE_MONGODB
-JWT_SECRET=TU_SECRETO_JWT
-JWT_EXPIRES_IN=1h
+```text
+src/
+│
+├── config/
+│   └── passport.config.js
+│
+├── controllers/
+│   ├── events.controller.js
+│   └── sessions.controller.js
+│
+├── middlewares/
+│   ├── auth.middleware.js
+│   └── authorize.middleware.js
+│
+├── models/
+│   ├── Event.js
+│   └── User.js
+│
+├── repositories/
+│   └── users.repository.js
+│
+├── routes/
+│   ├── events.router.js
+│   ├── health.router.js
+│   ├── sessions.router.js
+│   └── users.router.js
+│
+├── app.js
+└── server.js
 ```
 
-El archivo `.env` no debe subirse al repositorio.
+---
+
+## Middlewares
+
+### `auth.middleware.js`
+
+Responsable de verificar la autenticación mediante JWT.
+
+```text
+JWT válido → req.user → continúa
+JWT inválido/ausente → 401
+```
+
+### `authorize.middleware.js`
+
+Responsable de verificar que el rol del usuario tenga permiso para realizar la acción.
+
+```text
+Rol permitido → continúa
+Rol no permitido → 403
+```
 
 ---
 
-## Ejecución del proyecto
+## Variables de entorno
 
-Instalar las dependencias:
+El proyecto utiliza variables de entorno para la configuración sensible.
+
+Archivo utilizado durante el desarrollo:
+
+```text
+.env
+```
+
+Las variables esperadas son:
+
+```text
+MONGO_URL=
+JWT_SECRET=
+PORT=
+```
+
+Para publicar el proyecto se debe utilizar:
+
+```text
+.env.example
+```
+
+No se debe subir el archivo `.env` al repositorio.
+
+---
+
+## Instalación
+
+Clonar el repositorio e instalar las dependencias:
 
 ```bash
 npm install
 ```
+
+Crear el archivo:
+
+```text
+.env
+```
+
+Configurar las variables de entorno necesarias.
 
 Iniciar el servidor:
 
@@ -386,74 +463,51 @@ Iniciar el servidor:
 npm start
 ```
 
-El servidor se ejecuta en:
+---
 
-```text
-http://localhost:8080
-```
+## Tecnologías utilizadas
+
+- Node.js
+- Express
+- MongoDB
+- Mongoose
+- Passport
+- Passport Local
+- Passport JWT
+- bcrypt
+- JSON Web Token
+- Postman
 
 ---
 
-## Cómo probar los endpoints
+## Seguridad
 
-### Registro
+El proyecto implementa:
 
-Enviar una petición POST a:
+- Autenticación mediante JWT.
+- JWT almacenado mediante cookie.
+- Contraseñas almacenadas utilizando hash.
+- Roles de usuario.
+- Middleware reutilizable de autenticación.
+- Middleware reutilizable de autorización.
+- Protección de rutas.
+- Control de propiedad de recursos.
+- Respuestas diferenciadas entre errores `401` y `403`.
+- Restricción del rol durante el registro público.
 
-```text
-http://localhost:8080/api/sessions/register
-```
+---
 
-Con un body JSON:
+## Pre-entrega
 
-```json
-{
-  "first_name": "Nombre",
-  "last_name": "Apellido",
-  "email": "email@mail.com",
-  "password": "contraseña"
-}
-```
+Esta implementación corresponde a la **Pre-entrega 5 — Roles y autorización** del proyecto Backend II.
 
-### Login
+El objetivo principal de esta etapa es implementar:
 
-Enviar una petición POST a:
-
-```text
-http://localhost:8080/api/sessions/login
-```
-
-Con un body JSON:
-
-```json
-{
-  "email": "email@mail.com",
-  "password": "contraseña"
-}
-```
-
-El login exitoso genera la cookie `currentUser`.
-
-### Usuario actual
-
-Enviar una petición GET a:
-
-```text
-http://localhost:8080/api/sessions/current
-```
-
-No requiere body.
-
-La cookie `currentUser` debe estar presente y contener un JWT válido.
-
-### Logout
-
-Enviar una petición POST a:
-
-```text
-http://localhost:8080/api/sessions/logout
-```
-
-No requiere body.
-
-Después del logout, una petición a `/api/sessions/current` debe devolver `401 Unauthorized`.
+- Roles.
+- Autenticación.
+- Autorización.
+- Middleware reutilizable.
+- Protección de rutas.
+- Control de permisos.
+- Control de propiedad de recursos.
+- Manejo correcto de respuestas `401` y `403`.

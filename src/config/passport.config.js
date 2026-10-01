@@ -48,7 +48,7 @@ export const initializePassport = () => {
                     last_name,
                     email: normalizedEmail,
                     password: hashedPassword,
-                    role: 'user' 
+                    role: 'user'
                 })
 
                 return done(null, newUser)
@@ -84,7 +84,7 @@ export const initializePassport = () => {
 
                 return done(null, user)
             } catch (error) {
-                return done(error)
+                return done(error, false)
             }
         }
     ))
@@ -105,7 +105,7 @@ export const initializePassport = () => {
                 }
 
                 return done(null, {
-                    id: user._id,
+                    id: user._id.toString(),
                     first_name: user.first_name,
                     last_name: user.last_name,
                     email: user.email,
