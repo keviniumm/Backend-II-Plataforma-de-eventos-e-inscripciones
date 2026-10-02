@@ -11,3 +11,14 @@ export const findEventById = async (id) => {
 export const createEvent = async (eventData) => {
     return await Event.create(eventData)
 }
+
+export const updateEvent = async (id, eventData) => {
+    return await Event.findByIdAndUpdate(
+        id,
+        eventData,
+        {
+            new: true,
+            runValidators: true
+        }
+    )
+}

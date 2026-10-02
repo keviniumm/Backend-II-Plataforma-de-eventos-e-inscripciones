@@ -1,6 +1,7 @@
 import { Router } from 'express'
 import {
     getEvents,
+    getEventById,
     createEvent,
     updateEvent
 } from '../controllers/events.controller.js'
@@ -10,6 +11,8 @@ import { authorizeMiddleware } from '../middlewares/authorize.middleware.js'
 const router = Router()
 
 router.get('/', getEvents)
+
+router.get('/:id', getEventById)
 
 router.post(
     '/',

@@ -1,13 +1,39 @@
-import Event from '../models/Event.js'
-import { findEvents } from '../repositories/events.repository.js'
+import {
+    getEvents as getEventsService,
+    getEventById as getEventByIdService,
+    createEventService,
+    updateEventService
+} from '../services/events.service.js'
 
 export const getEvents = async (req, res, next) => {
     try {
-        const events = await findEvents({})
+        const events = await getEventsService({})
 
         res.status(200).json({
             status: 'success',
             payload: events
+        })
+    } catch (error) {
+        next(error)
+    }
+}
+
+export const getEventById = async (req, res, next) => {
+    try {
+        const { id } = req.params
+
+        const event = await getEventByIdService(id)
+
+        if (!event) {
+            return res.status(404).json({
+                status: 'error',
+                message: 'Evento no encontrado'
+            })
+        }
+
+        res.status(200).json({
+            status: 'success',
+            payload: event
         })
     } catch (error) {
         next(error)
@@ -27,7 +53,7 @@ export const createEvent = async (req, res, next) => {
             status
         } = req.body
 
-        const event = await Event.create({
+        const event = await createEventService({
             title,
             description,
             category,
@@ -62,7 +88,7 @@ export const updateEvent = async (req, res, next) => {
             status
         } = req.body
 
-        const event = await Event.findById(id)
+        const event = await getEventByIdService(id)
 
         if (!event) {
             return res.status(404).json({
@@ -81,20 +107,20 @@ export const updateEvent = async (req, res, next) => {
             })
         }
 
-        event.title = title
-        event.description = description
-        event.category = category
-        event.date = date
-        event.location = location
-        event.capacity = capacity
-        event.price = price
-        event.status = status
-
-        await event.save()
+        const updatedEvent = await updateEventService(id, {
+            title,
+            description,
+            category,
+            date,
+            location,
+            capacity,
+            price,
+            status
+        })
 
         res.status(200).json({
             status: 'success',
-            payload: event
+            payload: updatedEvent
         })
     } catch (error) {
         next(error)
