@@ -1,5 +1,9 @@
 import { Router } from 'express'
-import { getEvents, createEvent, updateEvent } from '../controllers/events.controller.js'
+import {
+    getEvents,
+    createEvent,
+    updateEvent
+} from '../controllers/events.controller.js'
 import { authMiddleware } from '../middlewares/auth.middleware.js'
 import { authorizeMiddleware } from '../middlewares/authorize.middleware.js'
 
