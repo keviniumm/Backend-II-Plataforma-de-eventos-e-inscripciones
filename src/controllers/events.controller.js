@@ -194,10 +194,6 @@ export const updateEventStatus = async (req, res, next) => {
             })
         }
 
-        if (event.status === 'cancelled') {
-            throw new Error('No se puede modificar un evento cancelado')
-        }
-
         const updatedEvent = await updateEventStatusService(id, status)
 
         res.status(200).json({
