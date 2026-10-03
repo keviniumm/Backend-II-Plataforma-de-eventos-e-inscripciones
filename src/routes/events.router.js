@@ -3,7 +3,8 @@ import {
     getEvents,
     getEventById,
     createEvent,
-    updateEvent
+    updateEvent,
+    updateEventStatus
 } from '../controllers/events.controller.js'
 import { authMiddleware } from '../middlewares/auth.middleware.js'
 import { authorizeMiddleware } from '../middlewares/authorize.middleware.js'
@@ -26,6 +27,13 @@ router.put(
     authMiddleware,
     authorizeMiddleware('organizer', 'admin'),
     updateEvent
+)
+
+router.patch(
+    '/:id/status',
+    authMiddleware,
+    authorizeMiddleware('organizer', 'admin'),
+    updateEventStatus
 )
 
 export default router

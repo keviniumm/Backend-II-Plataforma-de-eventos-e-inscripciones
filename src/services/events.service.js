@@ -1,12 +1,27 @@
 import {
     findEvents,
+    countEvents,
     findEventById,
     createEvent,
-    updateEvent
+    updateEvent,
+    updateEventStatus
 } from '../repositories/events.repository.js'
 
-export const getEvents = async (filters) => {
-    return await findEvents(filters)
+export const getEvents = async (filters, page, limit, sort) => {
+    const skip = (page - 1) * limit
+
+    const [events, total] = await Promise.all([
+        findEvents(filters, skip, limit, sort),
+        countEvents(filters)
+    ])
+
+    return {
+        data: events,
+        page,
+        limit,
+        total,
+        totalPages: Math.ceil(total / limit)
+    }
 }
 
 export const getEventById = async (id) => {
@@ -33,4 +48,8 @@ export const createEventService = async (eventData) => {
 
 export const updateEventService = async (id, eventData) => {
     return await updateEvent(id, eventData)
+}
+
+export const updateEventStatusService = async (id, status) => {
+    return await updateEventStatus(id, status)
 }
