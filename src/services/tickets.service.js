@@ -9,6 +9,8 @@ import {
 } from '../repositories/tickets.repository.js'
 
 import { findEventById } from '../repositories/events.repository.js'
+import User from '../models/User.js'
+import { sendConfirmationEmail } from './email.service.js'
 import crypto from 'crypto'
 
 export const createTicketService = async (userId, eventId, quantity) => {
@@ -57,20 +59,44 @@ export const createTicketService = async (userId, eventId, quantity) => {
 
     const reservationCode = crypto.randomUUID()
 
-    return await createTicket({
+    const ticket = await createTicket({
         user: userId,
         event: eventId,
         status: 'confirmed',
         quantity,
         reservationCode
     })
+
+    const user = await User.findById(userId)
+
+    await sendConfirmationEmail(
+        user.email,
+        ticket,
+        event
+    )
+
+    return ticket
 }
 
 export const getMyTicketsService = async (userId) => {
     return await findTicketsByUser(userId)
 }
 
-export const getEventTicketsService = async (eventId) => {
+export const getEventTicketsService = async (eventId, userId, isAdmin) => {
+    const event = await findEventById(eventId)
+
+    if (!event) {
+        const error = new Error('Evento no encontrado')
+        error.statusCode = 404
+        throw error
+    }
+
+    if (!isAdmin && event.organizer.toString() !== userId.toString()) {
+        const error = new Error('No tenés permisos para ver los tickets de este evento')
+        error.statusCode = 403
+        throw error
+    }
+
     return await findTicketsByEvent(eventId)
 }
 

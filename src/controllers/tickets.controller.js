@@ -42,7 +42,11 @@ export const getEventTickets = async (req, res, next) => {
     try {
         const { eid } = req.params
 
-        const tickets = await getEventTicketsService(eid)
+        const tickets = await getEventTicketsService(
+            eid,
+            req.user.id,
+            req.user.role === 'admin'
+        )
 
         res.status(200).json({
             status: 'success',
