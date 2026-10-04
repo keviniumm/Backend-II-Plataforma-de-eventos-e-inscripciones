@@ -32,15 +32,21 @@ export const createEventService = async (eventData) => {
     const { date, capacity, price } = eventData
 
     if (new Date(date) <= new Date()) {
-        throw new Error('La fecha del evento debe ser futura')
+        const error = new Error('La fecha del evento debe ser futura')
+        error.statusCode = 400
+        throw error
     }
 
     if (capacity <= 0) {
-        throw new Error('La capacidad debe ser mayor a 0')
+        const error = new Error('La capacidad debe ser mayor a 0')
+        error.statusCode = 400
+        throw error
     }
 
     if (price < 0) {
-        throw new Error('El precio no puede ser menor a 0')
+        const error = new Error('El precio no puede ser menor a 0')
+        error.statusCode = 400
+        throw error
     }
 
     return await createEvent(eventData)
@@ -54,25 +60,35 @@ export const updateEventService = async (id, eventData) => {
     }
 
     if (event.status === 'cancelled') {
-        throw new Error('No se puede modificar un evento cancelado')
+        const error = new Error('No se puede modificar un evento cancelado')
+        error.statusCode = 400
+        throw error
     }
 
     if (event.status === 'finished' && eventData.status === 'published') {
-        throw new Error('No se puede publicar un evento finalizado')
+        const error = new Error('No se puede publicar un evento finalizado')
+        error.statusCode = 400
+        throw error
     }
 
     const { date, capacity, price } = eventData
 
     if (new Date(date) <= new Date()) {
-        throw new Error('La fecha del evento debe ser futura')
+        const error = new Error('La fecha del evento debe ser futura')
+        error.statusCode = 400
+        throw error
     }
 
     if (capacity <= 0) {
-        throw new Error('La capacidad debe ser mayor a 0')
+        const error = new Error('La capacidad debe ser mayor a 0')
+        error.statusCode = 400
+        throw error
     }
 
     if (price < 0) {
-        throw new Error('El precio no puede ser menor a 0')
+        const error = new Error('El precio no puede ser menor a 0')
+        error.statusCode = 400
+        throw error
     }
 
     return await updateEvent(id, eventData)
@@ -86,11 +102,15 @@ export const updateEventStatusService = async (id, status) => {
     }
 
     if (event.status === 'cancelled') {
-        throw new Error('No se puede modificar un evento cancelado')
+        const error = new Error('No se puede modificar un evento cancelado')
+        error.statusCode = 400
+        throw error
     }
 
     if (event.status === 'finished' && status === 'published') {
-        throw new Error('No se puede publicar un evento finalizado')
+        const error = new Error('No se puede publicar un evento finalizado')
+        error.statusCode = 400
+        throw error
     }
 
     return await updateEventStatus(id, status)
