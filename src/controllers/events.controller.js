@@ -6,6 +6,8 @@ import {
     updateEventStatusService
 } from '../services/events.service.js'
 
+import { toEventDTO } from '../dto/event.dto.js'
+
 export const getEvents = async (req, res, next) => {
     try {
         const {
@@ -54,7 +56,8 @@ export const getEvents = async (req, res, next) => {
 
         res.status(200).json({
             status: 'success',
-            ...events
+            ...events,
+            data: events.data.map(toEventDTO)
         })
     } catch (error) {
         next(error)
@@ -76,7 +79,7 @@ export const getEventById = async (req, res, next) => {
 
         res.status(200).json({
             status: 'success',
-            payload: event
+            payload: toEventDTO(event)
         })
     } catch (error) {
         next(error)
@@ -110,7 +113,7 @@ export const createEvent = async (req, res, next) => {
 
         res.status(201).json({
             status: 'success',
-            payload: event
+            payload: toEventDTO(event)
         })
     } catch (error) {
         next(error)
@@ -131,39 +134,31 @@ export const updateEvent = async (req, res, next) => {
             status
         } = req.body
 
-        const event = await getEventByIdService(id)
+        const updatedEvent = await updateEventService(
+            id,
+            {
+                title,
+                description,
+                category,
+                date,
+                location,
+                capacity,
+                price,
+                status
+            },
+            req.user
+        )
 
-        if (!event) {
+        if (!updatedEvent) {
             return res.status(404).json({
                 status: 'error',
                 message: 'Evento no encontrado'
             })
         }
 
-        if (
-            req.user.role === 'organizer' &&
-            event.organizer.toString() !== req.user.id
-        ) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'No tenés permisos para modificar este evento'
-            })
-        }
-
-        const updatedEvent = await updateEventService(id, {
-            title,
-            description,
-            category,
-            date,
-            location,
-            capacity,
-            price,
-            status
-        })
-
         res.status(200).json({
             status: 'success',
-            payload: updatedEvent
+            payload: toEventDTO(updatedEvent)
         })
     } catch (error) {
         next(error)
@@ -175,30 +170,22 @@ export const updateEventStatus = async (req, res, next) => {
         const { id } = req.params
         const { status } = req.body
 
-        const event = await getEventByIdService(id)
+        const updatedEvent = await updateEventStatusService(
+            id,
+            status,
+            req.user
+        )
 
-        if (!event) {
+        if (!updatedEvent) {
             return res.status(404).json({
                 status: 'error',
                 message: 'Evento no encontrado'
             })
         }
 
-        if (
-            req.user.role === 'organizer' &&
-            event.organizer.toString() !== req.user.id
-        ) {
-            return res.status(403).json({
-                status: 'error',
-                message: 'No tenés permisos para modificar este evento'
-            })
-        }
-
-        const updatedEvent = await updateEventStatusService(id, status)
-
         res.status(200).json({
             status: 'success',
-            payload: updatedEvent
+            payload: toEventDTO(updatedEvent)
         })
     } catch (error) {
         next(error)

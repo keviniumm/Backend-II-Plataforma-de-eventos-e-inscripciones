@@ -1,3 +1,4 @@
+import mongoose from 'mongoose'
 import Ticket from '../models/Ticket.js'
 
 class TicketsDao {
@@ -27,7 +28,7 @@ class TicketsDao {
         const result = await Ticket.aggregate([
             {
                 $match: {
-                    event: eventId,
+                    event: new mongoose.Types.ObjectId(eventId),
                     status: { $ne: 'cancelled' }
                 }
             },

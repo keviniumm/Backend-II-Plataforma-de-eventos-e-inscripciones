@@ -52,11 +52,20 @@ export const createEventService = async (eventData) => {
     return await createEvent(eventData)
 }
 
-export const updateEventService = async (id, eventData) => {
+export const updateEventService = async (id, eventData, user) => {
     const event = await findEventById(id)
 
     if (!event) {
         return null
+    }
+
+    if (
+        user.role === 'organizer' &&
+        event.organizer.toString() !== user.id.toString()
+    ) {
+        const error = new Error('No tenés permisos para modificar este evento')
+        error.statusCode = 403
+        throw error
     }
 
     if (event.status === 'cancelled') {
@@ -73,19 +82,19 @@ export const updateEventService = async (id, eventData) => {
 
     const { date, capacity, price } = eventData
 
-    if (new Date(date) <= new Date()) {
+    if (date !== undefined && new Date(date) <= new Date()) {
         const error = new Error('La fecha del evento debe ser futura')
         error.statusCode = 400
         throw error
     }
 
-    if (capacity <= 0) {
+    if (capacity !== undefined && capacity <= 0) {
         const error = new Error('La capacidad debe ser mayor a 0')
         error.statusCode = 400
         throw error
     }
 
-    if (price < 0) {
+    if (price !== undefined && price < 0) {
         const error = new Error('El precio no puede ser menor a 0')
         error.statusCode = 400
         throw error
@@ -94,11 +103,20 @@ export const updateEventService = async (id, eventData) => {
     return await updateEvent(id, eventData)
 }
 
-export const updateEventStatusService = async (id, status) => {
+export const updateEventStatusService = async (id, status, user) => {
     const event = await findEventById(id)
 
     if (!event) {
         return null
+    }
+
+    if (
+        user.role === 'organizer' &&
+        event.organizer.toString() !== user.id.toString()
+    ) {
+        const error = new Error('No tenés permisos para modificar este evento')
+        error.statusCode = 403
+        throw error
     }
 
     if (event.status === 'cancelled') {
