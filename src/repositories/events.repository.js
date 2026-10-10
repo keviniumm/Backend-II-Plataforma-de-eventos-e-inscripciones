@@ -1,42 +1,27 @@
-import Event from '../models/Event.js'
+import EventsDao from '../dao/events.dao.js'
+
+const eventsDao = new EventsDao()
 
 export const findEvents = async (filters, skip, limit, sort) => {
-    return await Event.find(filters)
-        .sort(sort)
-        .skip(skip)
-        .limit(limit)
+    return await eventsDao.findAll(filters, skip, limit, sort)
 }
 
 export const countEvents = async (filters) => {
-    return await Event.countDocuments(filters)
+    return await eventsDao.count(filters)
 }
 
 export const findEventById = async (id) => {
-    return await Event.findById(id)
+    return await eventsDao.findById(id)
 }
 
 export const createEvent = async (eventData) => {
-    return await Event.create(eventData)
+    return await eventsDao.create(eventData)
 }
 
 export const updateEvent = async (id, eventData) => {
-    return await Event.findByIdAndUpdate(
-        id,
-        eventData,
-        {
-            new: true,
-            runValidators: true
-        }
-    )
+    return await eventsDao.update(id, eventData)
 }
 
 export const updateEventStatus = async (id, status) => {
-    return await Event.findByIdAndUpdate(
-        id,
-        { status },
-        {
-            new: true,
-            runValidators: true
-        }
-    )
+    return await eventsDao.updateStatus(id, status)
 }

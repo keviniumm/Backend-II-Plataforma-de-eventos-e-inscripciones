@@ -9,6 +9,10 @@ class UsersRepository {
         return await this.usersDao.findByEmail(email)
     }
 
+    async findById(id) {
+        return await this.usersDao.findById(id)
+    }
+
     async findAll() {
         return await this.usersDao.findAll()
     }

@@ -9,9 +9,11 @@ import {
 } from '../repositories/tickets.repository.js'
 
 import { findEventById } from '../repositories/events.repository.js'
-import User from '../models/User.js'
+import UsersRepository from '../repositories/users.repository.js'
 import { sendConfirmationEmail } from './email.service.js'
 import crypto from 'crypto'
+
+const usersRepository = new UsersRepository()
 
 export const createTicketService = async (userId, eventId, quantity) => {
     const event = await findEventById(eventId)
@@ -67,7 +69,7 @@ export const createTicketService = async (userId, eventId, quantity) => {
         reservationCode
     })
 
-    const user = await User.findById(userId)
+    const user = await usersRepository.findById(userId)
 
     await sendConfirmationEmail(
         user.email,

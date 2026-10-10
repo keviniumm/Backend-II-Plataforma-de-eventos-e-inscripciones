@@ -5,6 +5,10 @@ class UsersDao {
         return await User.findOne({ email })
     }
 
+    async findById(id) {
+        return await User.findById(id)
+    }
+
     async findAll() {
         return await User.find().select('-password')
     }
