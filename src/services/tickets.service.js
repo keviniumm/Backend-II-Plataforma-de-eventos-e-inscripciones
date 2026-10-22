@@ -55,7 +55,7 @@ export const createTicketService = async (userId, eventId, quantity) => {
 
     if (availableCapacity < quantity) {
         const error = new Error(`No hay cupos suficientes. Cupos disponibles: ${availableCapacity}`)
-        error.statusCode = 400
+        error.statusCode = 409
         throw error
     }
 
@@ -64,18 +64,20 @@ export const createTicketService = async (userId, eventId, quantity) => {
     const ticket = await createTicket({
         user: userId,
         event: eventId,
-        status: 'confirmed',
+        status: 'active',
         quantity,
         reservationCode
     })
 
-    const user = await usersRepository.findById(userId)
+    try {
+        const user = await usersRepository.findById(userId)
 
-    await sendConfirmationEmail(
-        user.email,
-        ticket,
-        event
-    )
+        if (user) {
+            await sendConfirmationEmail(user.email, ticket, event)
+        }
+    } catch (error) {
+        console.error('No se pudo enviar el correo de confirmación:', error.message)
+    }
 
     return ticket
 }

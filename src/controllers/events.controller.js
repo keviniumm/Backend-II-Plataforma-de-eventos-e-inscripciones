@@ -1,3 +1,5 @@
+import mongoose from 'mongoose'
+
 import {
     getEvents as getEventsService,
     getEventById as getEventByIdService,
@@ -23,35 +25,46 @@ export const getEvents = async (req, res, next) => {
 
         const filters = {}
 
-        if (status) {
-            filters.status = status
-        }
-
-        if (category) {
-            filters.category = category
-        }
-
-        if (location) {
-            filters.location = location
-        }
+        if (status) filters.status = status
+        if (category) filters.category = category
+        if (location) filters.location = location
 
         if (dateFrom || dateTo) {
             filters.date = {}
 
             if (dateFrom) {
-                filters.date.$gte = new Date(dateFrom)
+                const startDate = new Date(dateFrom)
+
+                if (Number.isNaN(startDate.getTime())) {
+                    const error = new Error('La fecha inicial no es válida')
+                    error.statusCode = 400
+                    throw error
+                }
+
+                filters.date.$gte = startDate
             }
 
             if (dateTo) {
-                filters.date.$lte = new Date(dateTo)
+                const endDate = new Date(dateTo)
+
+                if (Number.isNaN(endDate.getTime())) {
+                    const error = new Error('La fecha final no es válida')
+                    error.statusCode = 400
+                    throw error
+                }
+
+                filters.date.$lte = endDate
             }
         }
+
+        const allowedSortFields = ['date', 'title', 'price', 'capacity']
+        const sortField = allowedSortFields.includes(sort) ? sort : 'date'
 
         const events = await getEventsService(
             filters,
             Number(page),
             Number(limit),
-            { [sort]: 1 }
+            { [sortField]: 1 }
         )
 
         res.status(200).json({
@@ -67,6 +80,13 @@ export const getEvents = async (req, res, next) => {
 export const getEventById = async (req, res, next) => {
     try {
         const { id } = req.params
+
+        if (!mongoose.isValidObjectId(id)) {
+            return res.status(400).json({
+                status: 'error',
+                message: 'El ID del evento no es válido'
+            })
+        }
 
         const event = await getEventByIdService(id)
 
@@ -95,8 +115,7 @@ export const createEvent = async (req, res, next) => {
             date,
             location,
             capacity,
-            price,
-            status
+            price
         } = req.body
 
         const event = await createEventService({
@@ -107,7 +126,6 @@ export const createEvent = async (req, res, next) => {
             location,
             capacity,
             price,
-            status,
             organizer: req.user.id
         })
 
@@ -122,7 +140,6 @@ export const createEvent = async (req, res, next) => {
 
 export const updateEvent = async (req, res, next) => {
     try {
-        const { id } = req.params
         const {
             title,
             description,
@@ -130,12 +147,11 @@ export const updateEvent = async (req, res, next) => {
             date,
             location,
             capacity,
-            price,
-            status
+            price
         } = req.body
 
         const updatedEvent = await updateEventService(
-            id,
+            req.params.id,
             {
                 title,
                 description,
@@ -143,8 +159,7 @@ export const updateEvent = async (req, res, next) => {
                 date,
                 location,
                 capacity,
-                price,
-                status
+                price
             },
             req.user
         )
@@ -167,12 +182,9 @@ export const updateEvent = async (req, res, next) => {
 
 export const updateEventStatus = async (req, res, next) => {
     try {
-        const { id } = req.params
-        const { status } = req.body
-
         const updatedEvent = await updateEventStatusService(
-            id,
-            status,
+            req.params.id,
+            req.body.status,
             req.user
         )
 

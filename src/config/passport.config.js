@@ -5,7 +5,6 @@ import bcrypt from 'bcrypt'
 import UsersRepository from '../repositories/users.repository.js'
 
 export const initializePassport = () => {
-
     const usersRepository = new UsersRepository()
 
     passport.use('register', new LocalStrategy(
@@ -53,6 +52,13 @@ export const initializePassport = () => {
 
                 return done(null, newUser)
             } catch (error) {
+                if (error.code === 11000) {
+                    return done(null, false, {
+                        message: 'El email ya está registrado',
+                        statusCode: 409
+                    })
+                }
+
                 return done(error)
             }
         }
@@ -116,5 +122,4 @@ export const initializePassport = () => {
             }
         }
     ))
-
 }

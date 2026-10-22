@@ -7,7 +7,23 @@ import {
     updateEventStatus
 } from '../repositories/events.repository.js'
 
+import { getOccupiedCapacity } from '../repositories/tickets.repository.js'
+
+const validStatuses = ['draft', 'published', 'cancelled', 'finished']
+
 export const getEvents = async (filters, page, limit, sort) => {
+    if (!Number.isInteger(page) || page < 1) {
+        const error = new Error('La página debe ser un número entero mayor a 0')
+        error.statusCode = 400
+        throw error
+    }
+
+    if (!Number.isInteger(limit) || limit < 1 || limit > 100) {
+        const error = new Error('El límite debe ser un número entero entre 1 y 100')
+        error.statusCode = 400
+        throw error
+    }
+
     const skip = (page - 1) * limit
 
     const [events, total] = await Promise.all([
@@ -74,12 +90,6 @@ export const updateEventService = async (id, eventData, user) => {
         throw error
     }
 
-    if (event.status === 'finished' && eventData.status === 'published') {
-        const error = new Error('No se puede publicar un evento finalizado')
-        error.statusCode = 400
-        throw error
-    }
-
     const { date, capacity, price } = eventData
 
     if (date !== undefined && new Date(date) <= new Date()) {
@@ -94,6 +104,18 @@ export const updateEventService = async (id, eventData, user) => {
         throw error
     }
 
+    if (capacity !== undefined && capacity < event.capacity) {
+        const occupiedCapacity = await getOccupiedCapacity(id)
+
+        if (capacity < occupiedCapacity) {
+            const error = new Error(
+                `La capacidad no puede ser menor a los ${occupiedCapacity} lugares ya reservados`
+            )
+            error.statusCode = 409
+            throw error
+        }
+    }
+
     if (price !== undefined && price < 0) {
         const error = new Error('El precio no puede ser menor a 0')
         error.statusCode = 400
@@ -104,6 +126,12 @@ export const updateEventService = async (id, eventData, user) => {
 }
 
 export const updateEventStatusService = async (id, status, user) => {
+    if (!validStatuses.includes(status)) {
+        const error = new Error('Estado de evento inválido')
+        error.statusCode = 400
+        throw error
+    }
+
     const event = await findEventById(id)
 
     if (!event) {

@@ -1,340 +1,479 @@
 # Plataforma de Eventos e Inscripciones
 
-## Pre-entrega 8: Arquitectura con DAO, Repository y DTO
+## ENTREGA FINAL — Backend II
 
 API backend desarrollada con Node.js, Express y MongoDB para gestionar usuarios, eventos, inscripciones y tickets.
 
-El objetivo de esta entrega es implementar una arquitectura por capas que separe el acceso a datos, la lógica de negocio y las respuestas HTTP, manteniendo el funcionamiento de los endpoints existentes.
+Esta entrega final integra la arquitectura por capas, la autenticación y autorización de usuarios, la gestión de eventos, el control de capacidad, las inscripciones y sus cancelaciones, las validaciones de datos y el manejo centralizado de errores.
 
-## Tecnologías utilizadas
+El proyecto busca mantener una separación clara de responsabilidades, facilitar el mantenimiento del código y asegurar que las respuestas de la API expongan únicamente la información necesaria.
 
-- Node.js
-- Express
-- MongoDB
-- Mongoose
-- Passport
-- JWT
-- Nodemailer
+---
 
-## Arquitectura en capas
+## 1. Tecnologías utilizadas
 
-El proyecto utiliza una arquitectura organizada en capas para separar responsabilidades y facilitar el mantenimiento.
+* Node.js
+* Express
+* MongoDB
+* Mongoose
+* Passport
+* JWT
+* bcrypt
+* Nodemailer
+* dotenv
+* cookie-parser
 
-### 1. DAO (Data Access Object)
+---
+
+## 2. Arquitectura del proyecto
+
+El proyecto utiliza una arquitectura por capas para separar el acceso a datos, las reglas de negocio y la gestión de las solicitudes HTTP.
+
+### 2.1. DAO (Data Access Object)
 
 Ubicación: `src/dao/`
 
-Los DAO son responsables del acceso directo a los modelos de Mongoose y a la base de datos.
+Los DAO se encargan del acceso directo a los modelos de Mongoose y a la base de datos.
 
-- `users.dao.js`: acceso a los usuarios.
-- `events.dao.js`: acceso a los eventos.
-- `tickets.dao.js`: acceso a los tickets.
+Archivos principales:
 
-Esta capa centraliza las consultas, búsquedas, creaciones, actualizaciones y conteos de documentos.
+* `users.dao.js`
+* `events.dao.js`
+* `tickets.dao.js`
 
-Los DAO son los únicos archivos de la aplicación que deben importar directamente los modelos de Mongoose.
+Responsabilidades:
 
-### 2. Repository
+* Consultar documentos.
+* Buscar registros por identificador.
+* Crear y actualizar registros.
+* Ejecutar operaciones de acceso a datos.
+* Centralizar las consultas a MongoDB.
+
+### 2.2. Repository
 
 Ubicación: `src/repositories/`
 
-Los Repository utilizan los DAO y ofrecen operaciones que permiten a los Services acceder a los datos sin importar directamente los modelos de Mongoose.
+Archivos principales:
 
-- `users.repository.js`
-- `events.repository.js`
-- `tickets.repository.js`
+* `users.repository.js`
+* `events.repository.js`
+* `tickets.repository.js`
 
-Esta capa actúa como intermediaria entre el acceso a datos y la lógica de negocio.
+Los Repository actúan como intermediarios entre los Services y los DAO, ofreciendo operaciones para trabajar con los datos sin que la lógica de negocio necesite acceder directamente a los modelos de Mongoose.
 
-### 3. Services
+### 2.3. Services
 
 Ubicación: `src/services/`
 
-Los Services concentran las reglas de negocio y utilizan los Repository para acceder a los datos.
+Los Services concentran las reglas de negocio de la aplicación.
 
 Entre sus responsabilidades se encuentran:
 
-- Validar las reglas de negocio de los eventos.
-- Controlar la capacidad disponible.
-- Evitar inscripciones duplicadas activas.
-- Gestionar los estados de los tickets.
-- Verificar permisos sobre los recursos.
-- Gestionar el envío de emails de confirmación.
+* Gestionar las operaciones relacionadas con usuarios.
+* Validar las condiciones de creación y modificación de eventos.
+* Controlar la capacidad disponible.
+* Evitar inscripciones activas duplicadas.
+* Gestionar los estados de los tickets.
+* Verificar permisos sobre los recursos.
+* Procesar las cancelaciones de inscripciones.
+* Gestionar el envío de correos de confirmación.
 
-Los Services no deben importar directamente modelos de Mongoose ni acceder directamente a los DAO.
-
-### 4. Controllers
+### 2.4. Controllers
 
 Ubicación: `src/controllers/`
 
 Los Controllers coordinan las solicitudes y respuestas HTTP.
 
-Sus responsabilidades son:
+Sus responsabilidades incluyen:
 
-- Recibir los datos de `body`, `params` y `query`.
-- Invocar los Services correspondientes.
-- Construir las respuestas HTTP.
-- Delegar los errores al middleware centralizado.
+* Recibir los datos de `body`, `params` y `query`.
+* Invocar los Services correspondientes.
+* Devolver las respuestas HTTP.
+* Gestionar los códigos de estado.
+* Delegar los errores al middleware centralizado.
 
-Los Controllers no deben importar directamente modelos de Mongoose ni concentrar las reglas de negocio.
-
-### 5. DTO (Data Transfer Object)
+### 2.5. DTO (Data Transfer Object)
 
 Ubicación: `src/dto/`
 
-Los DTO controlan los datos que se exponen en las respuestas de la API.
+Los DTO controlan la información que se devuelve en las respuestas de la API.
 
-- `user.dto.js`: respuestas de usuarios.
-- `event.dto.js`: respuestas de eventos.
-- `ticket.dto.js`: respuestas de tickets e inscripciones.
+Archivos principales:
 
-Los DTO permiten seleccionar los campos que se devuelven y evitar la exposición de información sensible, como las contraseñas.
+* `user.dto.js`
+* `event.dto.js`
+* `ticket.dto.js`
 
-También filtran los datos de los documentos relacionados cuando se utilizan referencias pobladas.
+Permiten seleccionar los campos que se exponen, evitar la devolución de contraseñas y controlar la representación de los datos relacionados.
 
-### 6. Middlewares
+### 2.6. Models
 
-Ubicación: `src/middlewares/`
+Ubicación: `src/models/`
 
-Los middlewares gestionan responsabilidades transversales:
+Los modelos definen la estructura de los documentos almacenados en MongoDB mediante Mongoose.
 
-- Autenticación.
-- Autorización.
-- Manejo centralizado de errores.
+La aplicación trabaja con entidades relacionadas con:
 
-El middleware de errores permite mantener un formato consistente para las respuestas de error.
+* Usuarios.
+* Eventos.
+* Tickets e inscripciones.
 
-### 7. Routes
+### 2.7. Routes
 
 Ubicación: `src/routes/`
 
-Las rutas definen los endpoints disponibles y los middlewares que se ejecutan antes de llegar a los Controllers.
+Las rutas definen los endpoints disponibles y los middlewares que deben ejecutarse antes de llegar a los Controllers.
 
-La organización de las rutas permite mantener separadas la definición de los endpoints y la lógica de las operaciones.
+Archivos principales:
 
-## Instalación y ejecución
+* `sessions.router.js`
+* `users.router.js`
+* `events.router.js`
+* `tickets.router.js`
+* `health.router.js`
 
-### 1. Instalar dependencias
+### 2.8. Middlewares
+
+Ubicación: `src/middlewares/`
+
+Los middlewares permiten gestionar responsabilidades transversales, entre ellas:
+
+* Autenticación.
+* Autorización.
+* Manejo centralizado de errores.
+
+### 2.9. Configuración y utilidades
+
+El proyecto también incluye archivos de configuración y utilidades para gestionar la conexión a la base de datos, la autenticación y otros procesos necesarios para el funcionamiento de la API.
+
+---
+
+## 3. Instalación y ejecución
+
+### 3.1. Requisitos previos
+
+Para ejecutar el proyecto se necesita:
+
+* Node.js.
+* npm.
+* Una base de datos MongoDB accesible.
+* Un entorno de correo configurado para las notificaciones, si se desea utilizar esa funcionalidad.
+
+### 3.2. Instalar las dependencias
+
+Desde la carpeta raíz del proyecto, ejecutar:
 
 ```bash
 npm install
 ```
 
-### 2. Configurar las variables de entorno
+### 3.3. Configurar las variables de entorno
 
-Crear un archivo `.env` en la raíz del proyecto y configurar las variables necesarias.
+Crear un archivo `.env` en la raíz del proyecto, tomando como referencia `.env.example`.
 
-Utilizar `.env.example` como referencia.
+Las variables utilizadas son:
 
-Las variables utilizadas incluyen:
+```env
+PORT=8080
+NODE_ENV=development
+MONGO_URL=
+JWT_SECRET=
+JWT_EXPIRES_IN=1h
+MAIL_HOST=
+MAIL_PORT=
+MAIL_USER=
+MAIL_PASS=
+MAIL_FROM=
+```
 
-- `PORT`
-- `NODE_ENV`
-- `MONGO_URL`
-- `JWT_SECRET`
-- `JWT_EXPIRES_IN`
-- `MAIL_HOST`
-- `MAIL_PORT`
-- `MAIL_USER`
-- `MAIL_PASS`
-- `MAIL_FROM`
+Descripción:
 
-No publicar credenciales reales ni subir el archivo `.env` al repositorio.
+* `PORT`: puerto en el que se inicia el servidor.
+* `NODE_ENV`: entorno de ejecución.
+* `MONGO_URL`: cadena de conexión a MongoDB.
+* `JWT_SECRET`: secreto utilizado para firmar los tokens JWT.
+* `JWT_EXPIRES_IN`: duración del token.
+* `MAIL_HOST`: servidor SMTP.
+* `MAIL_PORT`: puerto del servidor SMTP.
+* `MAIL_USER`: usuario del servicio de correo.
+* `MAIL_PASS`: credencial del servicio de correo.
+* `MAIL_FROM`: dirección de correo utilizada como remitente.
 
-### 3. Iniciar el servidor
+Se deben completar los valores correspondientes al entorno de ejecución.
+
+El archivo `.env` está destinado a la configuración local y se encuentra excluido del seguimiento de Git mediante `.gitignore`. Para compartir la configuración del proyecto se utiliza `.env.example`, sin credenciales personales.
+
+### 3.4. Iniciar el servidor
+
+Ejecutar:
 
 ```bash
 npm start
 ```
 
-El servidor utiliza el archivo `src/server.js` como punto de entrada.
+El punto de entrada del servidor es:
 
-## Usuarios y autenticación
+`src/server.js`
 
-La API utiliza Passport y JWT para autenticar usuarios y controlar el acceso a los recursos.
+La aplicación utiliza el puerto configurado en `PORT`. Con la configuración predeterminada, la dirección local es:
 
-### Roles
+`http://localhost:8080`
 
-- `user`
-- `organizer`
-- `admin`
+---
 
-### Registro
+## 4. Usuarios y autenticación
 
-`POST /api/sessions/register`
+La aplicación utiliza Passport y JWT para autenticar usuarios y controlar el acceso a los recursos protegidos.
 
-Registra un usuario y devuelve sus datos mediante un DTO, sin exponer la contraseña.
+Las contraseñas se almacenan mediante hashing con bcrypt y no deben exponerse en las respuestas de la API.
 
-### Login
+### Roles disponibles
 
-`POST /api/sessions/login`
+* `user`: usuario que puede consultar eventos y gestionar sus propias inscripciones.
+* `organizer`: usuario con permisos de gestión sobre los eventos que le corresponden.
+* `admin`: administrador con permisos ampliados para gestionar recursos.
 
-Autentica al usuario y establece la cookie de autenticación.
+Los permisos concretos dependen de las reglas de autorización implementadas en cada endpoint.
 
-### Usuario autenticado
+### Endpoints de sesiones
 
-`GET /api/sessions/current`
+| Método | Endpoint                 | Descripción                       |
+| ------ | ------------------------ | --------------------------------- |
+| POST   | `/api/sessions/register` | Registrar un usuario.             |
+| POST   | `/api/sessions/login`    | Iniciar sesión.                   |
+| GET    | `/api/sessions/current`  | Consultar el usuario autenticado. |
+| POST   | `/api/sessions/logout`   | Cerrar sesión.                    |
 
-Devuelve los datos del usuario autenticado sin incluir la contraseña.
+La autenticación utiliza una cookie HTTP para mantener la sesión autenticada mediante JWT.
 
-### Logout
+### Usuarios
 
-`POST /api/sessions/logout`
+| Método | Endpoint     | Descripción                                                           |
+| ------ | ------------ | --------------------------------------------------------------------- |
+| GET    | `/api/users` | Consultar el listado de usuarios según los permisos correspondientes. |
 
-Permite cerrar la sesión.
+Las respuestas de usuarios utilizan DTO para controlar los datos expuestos y excluir las contraseñas.
 
-### Listar usuarios
+---
 
-`GET /api/users`
+## 5. Gestión de eventos
 
-Permite consultar los usuarios con los permisos correspondientes.
+Los eventos contienen información como título, descripción, categoría, fecha, ubicación, capacidad, precio, estado y organizador.
 
-La respuesta utiliza un DTO para controlar los campos expuestos y excluir las contraseñas.
+### Estados posibles
 
-## Gestión de eventos
+* `draft`: evento en borrador.
+* `published`: evento publicado.
+* `cancelled`: evento cancelado.
+* `finished`: evento finalizado.
 
-Los eventos contienen información como título, descripción, categoría, fecha, ubicación, capacidad, precio, organizador y estado.
+### Endpoints de eventos
 
-### Estados de los eventos
+| Método | Endpoint                   | Descripción                                                             |
+| ------ | -------------------------- | ----------------------------------------------------------------------- |
+| GET    | `/api/events`              | Consultar eventos.                                                      |
+| GET    | `/api/events/:id`          | Consultar un evento por identificador.                                  |
+| POST   | `/api/events`              | Crear un evento según los permisos del usuario.                         |
+| PUT    | `/api/events/:id`          | Modificar los datos de un evento.                                       |
+| PATCH  | `/api/events/:id/status`   | Modificar el estado de un evento.                                       |
+| GET    | `/api/events/:eid/tickets` | Consultar los tickets de un evento según los permisos correspondientes. |
 
-- `draft`
-- `published`
-- `cancelled`
-- `finished`
+### Filtros, paginación y ordenamiento
 
-### Consultar eventos
+El listado de eventos admite parámetros de consulta para filtrar y organizar los resultados.
 
-`GET /api/events`
+Parámetros disponibles:
 
-Permite consultar eventos mediante los filtros y la paginación disponibles.
+* `status`: filtrar por estado.
+* `category`: filtrar por categoría.
+* `location`: filtrar por ubicación.
+* `dateFrom`: filtrar desde una fecha.
+* `dateTo`: filtrar hasta una fecha.
+* `page`: seleccionar la página.
+* `limit`: cantidad de resultados por página.
+* `sort`: ordenar los resultados.
 
-### Consultar un evento
+Ejemplos:
 
-`GET /api/events/:id`
+Consultar eventos publicados:
 
-Devuelve los datos de un evento específico.
+`GET /api/events?status=published`
 
-### Crear un evento
+Filtrar por categoría:
 
-`POST /api/events`
+`GET /api/events?category=tecnologia`
 
-Permite crear un evento según los permisos del usuario autenticado.
+Filtrar por ubicación:
 
-### Modificar un evento
+`GET /api/events?location=Buenos%20Aires`
 
-`PUT /api/events/:id`
+Filtrar por intervalo de fechas:
 
-Permite modificar un evento según las reglas de autorización.
+`GET /api/events?dateFrom=2027-01-01&dateTo=2027-06-30`
 
-### Modificar el estado de un evento
+Consultar una página de resultados:
 
-`PATCH /api/events/:id/status`
+`GET /api/events?page=1&limit=10`
 
-Permite actualizar el estado de un evento según las reglas de autorización.
+Ordenar por título:
 
-Las respuestas de eventos utilizan un DTO para controlar los campos expuestos, incluidos los datos del organizador.
+`GET /api/events?sort=title&page=1&limit=10`
 
-## Gestión de tickets e inscripciones
+Los valores de paginación y los parámetros de fecha se validan para evitar solicitudes con datos inválidos.
+
+### Validaciones de eventos
+
+La aplicación contempla validaciones relacionadas con:
+
+* Campos obligatorios.
+* Fechas.
+* Capacidad mayor que cero.
+* Precio igual o mayor que cero.
+* Estados permitidos.
+* Capacidad disponible frente a las inscripciones existentes.
+* Restricciones para modificar eventos cancelados.
+* Permisos de acceso y modificación.
+
+---
+
+## 6. Gestión de tickets e inscripciones
 
 Los tickets representan las inscripciones de los usuarios a los eventos.
 
-Cada ticket contiene referencias al usuario y al evento, además de su estado, cantidad reservada y código de reserva.
+Cada ticket incluye información relacionada con el usuario, el evento, el estado de la inscripción, la cantidad reservada, el código de reserva y las fechas correspondientes.
 
 ### Estados de los tickets
 
-- `confirmed`
-- `pending`
-- `cancelled`
+* `active`: inscripción activa.
+* `cancelled`: inscripción cancelada.
 
-### Inscribirse a un evento
+### Endpoints de tickets
 
-`POST /api/events/:eid/tickets`
+| Método | Endpoint                   | Descripción                                                  |
+| ------ | -------------------------- | ------------------------------------------------------------ |
+| POST   | `/api/events/:eid/tickets` | Crear una inscripción a un evento.                           |
+| GET    | `/api/tickets/my-tickets`  | Consultar las inscripciones del usuario autenticado.         |
+| GET    | `/api/events/:eid/tickets` | Consultar las inscripciones de un evento según los permisos. |
+| PATCH  | `/api/tickets/:tid/cancel` | Cancelar una inscripción.                                    |
 
-Permite solicitar una inscripción.
+### Reglas de negocio
 
-La operación contempla reglas de negocio como:
+La gestión de inscripciones contempla las siguientes reglas:
 
-- Verificar que el evento exista.
-- Comprobar que el evento esté publicado y no haya finalizado.
-- Validar la cantidad solicitada.
-- Evitar inscripciones duplicadas activas.
-- Comprobar la capacidad disponible.
-- Generar el código de reserva.
-- Enviar el email de confirmación.
+* El evento debe existir.
+* El evento debe estar publicado y admitir inscripciones.
+* La cantidad solicitada debe ser un número entero mayor que cero.
+* No se permiten inscripciones activas duplicadas del mismo usuario al mismo evento.
+* Se comprueba la capacidad disponible antes de aceptar una inscripción.
+* La capacidad se calcula teniendo en cuenta las cantidades reservadas por las inscripciones que siguen ocupando lugares.
+* Cada inscripción cuenta con un código de reserva.
+* Se contempla el envío de correos de confirmación.
+* Los usuarios pueden consultar sus propias inscripciones.
+* La cancelación está sujeta a las reglas de autorización.
+* No se permite cancelar dos veces una misma inscripción.
+* Las inscripciones canceladas permanecen registradas y dejan de ocupar capacidad disponible.
 
-### Consultar mis tickets
+Las respuestas de tickets utilizan DTO para controlar los datos expuestos del ticket y de sus entidades relacionadas.
 
-`GET /api/tickets/my-tickets`
+---
 
-Devuelve las inscripciones del usuario autenticado.
+## 7. Manejo de errores HTTP
 
-### Consultar los tickets de un evento
+La API dispone de un middleware centralizado para gestionar errores y mantener un formato consistente de respuesta.
 
-`GET /api/events/:eid/tickets`
+Entre los códigos HTTP utilizados se encuentran:
 
-Permite consultar las inscripciones de un evento según los permisos del usuario.
+* `200 OK`: solicitud procesada correctamente.
+* `201 Created`: recurso creado correctamente.
+* `400 Bad Request`: datos inválidos o reglas de negocio incumplidas.
+* `401 Unauthorized`: falta autenticación válida.
+* `403 Forbidden`: el usuario no tiene permisos suficientes.
+* `404 Not Found`: recurso no encontrado.
+* `409 Conflict`: conflicto con el estado o los datos existentes, cuando corresponde.
+* `500 Internal Server Error`: error interno del servidor.
 
-### Cancelar un ticket
+También se validan identificadores y fechas para devolver mensajes comprensibles ante solicitudes inválidas.
 
-`PATCH /api/tickets/:tid/cancel`
+---
 
-Permite cancelar un ticket según las reglas de autorización.
-
-Los tickets cancelados permanecen registrados y dejan de ocupar capacidad disponible.
-
-Las respuestas utilizan DTO para controlar los datos del ticket, del usuario y del evento relacionados.
-
-## Manejo de errores HTTP
-
-La API utiliza un middleware centralizado para gestionar los errores y mantener respuestas consistentes.
-
-Códigos HTTP contemplados:
-
-- `400 Bad Request`: datos inválidos o reglas de negocio incumplidas.
-- `401 Unauthorized`: usuario no autenticado.
-- `403 Forbidden`: usuario sin permisos.
-- `404 Not Found`: recurso no encontrado.
-- `409 Conflict`: conflicto, como una inscripción duplicada.
-- `500 Internal Server Error`: error interno del servidor.
-
-## Seguridad
+## 8. Seguridad
 
 La aplicación contempla las siguientes medidas:
 
-- Las contraseñas se almacenan mediante hashing.
-- Las respuestas de la API no deben exponer contraseñas.
-- Las rutas protegidas requieren autenticación.
-- Los permisos se verifican según el usuario y su rol.
-- Las credenciales se configuran mediante variables de entorno.
-- El archivo `.env` no debe publicarse en el repositorio.
+* Hashing de contraseñas mediante bcrypt.
+* Autenticación mediante Passport y JWT.
+* Uso de cookie HTTP para la autenticación.
+* Autorización según roles y permisos sobre los recursos.
+* Exclusión de contraseñas de las respuestas de la API.
+* Uso de DTO para controlar los datos expuestos.
+* Configuración mediante variables de entorno.
+* Manejo centralizado de errores.
 
-## Pruebas realizadas
+Las credenciales de servicios externos deben mantenerse fuera del código fuente y no deben publicarse en el repositorio.
 
-Se realizaron pruebas manuales con Postman para comprobar los principales flujos de la aplicación después de implementar la arquitectura.
+---
 
-Entre los casos comprobados se encuentran:
+## 9. Pruebas realizadas con Postman
 
-1. Registro de usuarios.
-2. Inicio de sesión.
-3. Consulta del usuario autenticado mediante `/api/sessions/current`.
-4. Ausencia de contraseñas en las respuestas de usuarios.
-5. Creación y publicación de eventos.
-6. Creación de inscripciones.
-7. Consulta de las inscripciones de un usuario.
-8. Cancelación de inscripciones.
-9. Rechazo de cancelaciones repetidas.
-10. Consulta de tickets de un evento.
-11. Rechazo de inscripciones duplicadas activas.
-12. Restricciones de permisos sobre eventos y tickets ajenos.
-13. Rechazo de peticiones sin autenticación.
-14. Consulta del listado de usuarios con el rol de administrador.
+Se realizaron pruebas manuales para verificar los principales flujos de la aplicación y las validaciones de datos.
 
-Las pruebas manuales complementan la revisión de la separación entre DAO, Repository, Services, Controllers y DTO.
+### Usuarios y autenticación
 
-## Objetivo de la Pre-entrega 8
+* Registro correcto de usuarios.
+* Rechazo de registros con email duplicado.
+* Validación del formato del email.
+* Validación de campos obligatorios.
+* Validación de longitud de contraseña.
+* Inicio de sesión correcto.
+* Rechazo de credenciales incorrectas.
+* Consulta del usuario autenticado.
+* Cierre de sesión.
+* Rechazo de solicitudes posteriores sin autenticación.
 
-La Pre-entrega 8 tiene como objetivo mejorar la organización interna de la Plataforma de Eventos e Inscripciones mediante una arquitectura basada en DAO, Repository, Services, Controllers y DTO.
+### Eventos
 
-La separación de responsabilidades reduce el acoplamiento entre capas, centraliza las reglas de negocio y controla la información expuesta por la API.
+* Consulta del listado de eventos.
+* Consulta de eventos por identificador.
+* Rechazo de identificadores inexistentes.
+* Rechazo de identificadores mal formados.
+* Filtrado por estado.
+* Filtrado por categoría y ubicación.
+* Filtrado por intervalo de fechas.
+* Ordenamiento por distintos campos.
+* Paginación.
+* Validación de límites de paginación.
+* Rechazo de capacidad igual a cero.
+* Rechazo de precios negativos.
+* Rechazo de estados inválidos.
+* Restricciones de permisos.
+* Validación de fechas inválidas.
+* Control de capacidad frente a las inscripciones existentes.
 
-El comportamiento externo de los endpoints debe conservarse para que los clientes puedan seguir utilizando la API sin modificar la forma en que realizan sus solicitudes.
+### Tickets e inscripciones
+
+* Creación de inscripciones.
+* Consulta de las inscripciones propias.
+* Consulta de los tickets de un evento según los permisos.
+* Cancelación de inscripciones.
+* Rechazo de cancelaciones repetidas.
+* Rechazo de cancelaciones sin permisos.
+* Rechazo de inscripciones duplicadas activas.
+* Validación de cantidades iguales a cero.
+* Rechazo de cantidades decimales.
+* Rechazo de cantidades negativas.
+* Liberación de capacidad tras cancelar una inscripción.
+* Rechazo de inscripciones a eventos cancelados.
+
+Las pruebas se realizaron mediante solicitudes HTTP en Postman y permitieron verificar el comportamiento de los endpoints y las principales reglas de negocio.
+
+---
+
+## 10. Objetivo de la entrega final
+
+La entrega final consolida el desarrollo de la Plataforma de Eventos e Inscripciones y reúne las funcionalidades de autenticación, autorización, gestión de eventos, inscripciones y tickets.
+
+También incorpora una arquitectura por capas con DAO, Repository, Services, Controllers y DTO, con el objetivo de separar responsabilidades, reducir el acoplamiento y facilitar el mantenimiento del código.
+
+Las pruebas manuales con Postman permitieron comprobar los principales flujos de la API, las restricciones de acceso y las validaciones implementadas.
+
+**Estado del proyecto: ENTREGA FINAL — Backend II.**
